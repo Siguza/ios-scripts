@@ -1,0 +1,71 @@
+#!/bin/bash
+
+# Fail fast
+set -e;
+
+# Look for tools
+pbzx='pbzx';
+otaa='otaa';
+jcache='jcache';
+if ! hash "$pbzx"; then
+    pbzx="$(dirname "$0")/pbzx";
+    if ! [ -x "$pbzx" ]; then
+        echo "Couldn't find pbzx executable in PATH or $(dirname "$0")";
+        exit 1;
+    fi;
+fi;
+if ! hash "$otaa"; then
+    otaa="$(dirname "$0")/otaa";
+    if ! [ -x "$otaa" ]; then
+        echo "Couldn't find otaa executable in PATH or $(dirname "$0")";
+        exit 1;
+    fi;
+fi;
+if ! hash "$jcache"; then
+    jcache="$(dirname "$0")/jcache";
+    if ! [ -x "$jcache" ]; then
+        echo "Couldn't find jcache executable in PATH or $(dirname "$0")";
+        exit 1;
+    fi;
+fi;
+
+# Check arguments
+if [ "$1" == '' ] || [ "${1:${#1}-4}" != '.zip' ]; then
+    echo "Usage:";
+    echo "    $(basename "$0") ota.zip";
+    exit 1;
+fi;
+
+# Extract zip
+dir="$(basename "$1")";
+dir="$PWD/${dir:0:${#dir}-4}";
+if [ -e "$dir" ]; then
+    echo "Directory $dir already exists";
+    exit 1;
+fi;
+unzip -q -d "$dir" "$1";
+
+for pb in "$dir/AssetData/payloadv2/payload" "$dir/AssetData/payloadv2/payload."*; do
+    if [ -e "$pb" ]; then
+        "$pbzx" < "$pb" | unxz > "$pb.ota";
+        "$otaa" -l "$pb.ota" | egrep '^System/Library/Caches/com.apple.dyld/dyld_shared_cache_' | while read line; do
+            "$otaa" -e "$line" "$pb.ota";
+        done;
+    fi;
+done;
+if ! [ -e 'System/Library/Caches/com.apple.dyld/' ]; then
+    echo 'No shared cache found. Aborting.';
+    exit 1;
+fi;
+mv 'System/Library/Caches/com.apple.dyld/dyld_shared_cache_'* ./;
+rmdir -p 'System/Library/Caches/com.apple.dyld';
+for lib in 'dyld_shared_cache_'*; do
+    mkdir "${lib:18}";
+    cd "${lib:18}";
+    "$jcache" "../$lib";
+    cd '..';
+done;
+rm 'dyld_shared_cache_'*;
+
+# Clean up
+rm -r "$dir";

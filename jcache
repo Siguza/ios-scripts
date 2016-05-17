@@ -1,0 +1,89 @@
+#!/bin/bash
+
+# Note: Only tested on OS X!
+# For iOS you'll at least have to replace sed -E with -r, but maybe more.
+
+set -e;
+
+linkfrom() # src dst
+{
+    src="$1";
+    base="$(basename "$2")";
+    dst="$(dirname "$2")";
+    srcParts=();
+    dstParts=();
+    while [ "$src" != "$(dirname "$src")" ]; do
+        srcParts+=("$(basename "$src")");
+        src="$(dirname "$src")";
+    done;
+    while [ "$dst" != "$(dirname "$dst")" ]; do
+        dstParts+=("$(basename "$dst")");
+        dst="$(dirname "$dst")";
+    done;
+    srcLen="${#srcParts[@]}";
+    dstLen="${#dstParts[@]}";
+    same=true;
+    path='';
+    for i in $(seq 1 "$((srcLen>dstLen?srcLen:dstLen))"); do
+        s="$((srcLen-i))";
+        d="$((dstLen-i))";
+        if $same && [ "$s" -ge 0 ] && [ "$d" -ge 0 ] && [ "${srcParts[$s]}" == ${dstParts[$d]} ]; then
+            continue;
+        else
+            same=false;
+            if [ "$d" -ge 0 ]; then
+                if [ -n "$path" ]; then
+                    path="$path/${dstParts[$d]}";
+                else
+                    path="${dstParts[$d]}";
+                fi;
+            fi;
+            if [ "$s" -ge 0 ]; then
+                if [ -n "$path" ]; then
+                    path="../$path";
+                else
+                    path='..';
+                fi;
+            fi;
+        fi;
+    done;
+    if [ -n "$path" ]; then
+        echo "$path/$base";
+    else
+        echo "$base";
+    fi;
+}
+
+jtool='jtool';
+if ! hash "$jtool"; then
+    jtool="$(dirname "$0")/jtool";
+    if ! [ -x "$jtool" ]; then
+        echo "Couldn't find jtool executable in PATH or $(dirname "$0")";
+        exit 1;
+    fi;
+fi;
+
+file="$1";
+if [ "$file" == '' ]; then
+    echo "Usage:";
+    echo "    $(basename "$0") dyld_shared_cache_arm*";
+    exit 1;
+fi;
+
+"$jtool" -l "$file" | tail -n+2 | while read line; do
+    dst="$(sed -E 's/^[[:space:]]*[0-9]+:[[:space:]]*[0-9a-f]+[[:space:]]+(.*)$/\1/' <<<"$line" | sed -E 's#//+#/#g')";
+    key="fu_$(sed -E 's/^[[:space:]]*[0-9]+:[[:space:]]*([0-9a-f]+)[[:space:]]+.*$/\1/' <<<"$line")";
+    mkdir -p "./$(dirname "$dst")";
+    if [ -n "${!key}" ]; then
+        if [ "$dst" != "${!key}" ]; then
+            ln -s "$(linkfrom "$(dirname "$dst")" "${!key}")" "./$dst";
+        fi;
+        echo "$dst";
+        echo "    => ${!key}";
+    else
+        src="$("$jtool" -e "$dst" "$file" 2>/dev/null | sed -E 's/^Extracting .* at 0x[0-9a-f]+ into (.*)$/\1/')";
+        mv "$src" "./$dst";
+        declare "$key=$dst";
+        echo "$dst";
+    fi;
+done;
