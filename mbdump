@@ -1,0 +1,12 @@
+#!/bin/bash
+
+mbdb |
+sed -E 's/^.*\(([0-9a-f]{40})\)(.*$)/\1\2/g' |
+while read line; do
+    source="${line:0:40}";
+    target="target/$(echo "${line:40}" | sed -E 's/::/\//' | sed -E 's/^(AppDomain(Group)?)-/\1\//')";
+    if [ -x "$source" ]; then
+        mkdir -p "$(dirname "$target")";
+        cp "$source" "$target";
+    fi;
+done

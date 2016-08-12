@@ -1,0 +1,29 @@
+#!/bin/bash
+
+set -e;
+
+if [ "$1" != '' ]; then
+    shsh="$1";
+else
+    shsh=( *.shsh );
+    if [ "${#shsh[@]}" -gt 1 ]; then
+        echo 'More than one shsh file found in current directory. Please specify one.';
+        exit 1;
+    elif [ "${shsh[0]}" == '*.shsh' ]; then
+        echo 'No shsh file found in current directory. Please specify one.';
+        exit 1;
+    fi;
+    shsh="${shsh[0]}";
+fi;
+
+#if [ "$2" != '' ]; then
+#    apticket="$2";
+#else
+#    apticket='apticket.der';
+#fi;
+
+if plutil -extract ApImg4Ticket xml1 -o - "$shsh" &>/dev/null; then # Img4 format
+    plutil -extract ApImg4Ticket xml1 -o - "$shsh" | xmllint -xpath '/plist/data/text()' - | base64 -D > 'apticket.der';
+else # Img3 format
+    plutil -extract APTicket xml1 -o - "$shsh" | xmllint -xpath '/plist/data/text()' - | base64 -D > 'apticket.der';
+fi;
