@@ -7,6 +7,7 @@ A collection of scripts I wrote that have something to do with iOS.
 | `jcache` | Rebuild file hierarchy from a dyld_shared_cache. | [jtool](http://www.newosxbook.com/tools/jtool.tar) |
 | `mbdb` | `ls -la` with original file names for a MobileBackup. | Python |
 | `mbdump` | Rebuild file hierarch from a MobileBackup. | `mbdb` |
+| `mkdeb` | Tiny & crude script to make .deb files. | `ar`, ``tar` |
 | `shsh2apt` | Extract an apticket.der from an SHSH plist. | `plutil`, `xmllint`, `base64` |
 | `unlib` | Extract and rebuild dyld_shared_cache from an OTA bundle. | `jcache`, `unzip`, `unxz`, `grep`, [OTAPack](http://www.newosxbook.com/files/OTApack.tar) |
 

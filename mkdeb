@@ -1,0 +1,53 @@
+#!/bin/bash
+
+set -e;
+
+# Args
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $(basename "$0") <directory>";
+    exit 1;
+fi;
+
+# Prepare
+src="$(cd -P "$1"; echo $PWD;)";
+dst="$PWD";
+tmp="$(mktemp -d)";
+cleanup()
+{
+    rm -r "$tmp";
+}
+trap cleanup EXIT;
+
+# Config
+cd "$src";
+mkdir -p '.control';
+cd '.control';
+if ! [ -e 'control' ]; then
+    # TODO: prompt
+    echo '[!] Missing control file';
+    exit 1;
+fi;
+pkg="$(egrep '^Package:' 'control' | sed -E 's/^Package:[[:space:]]*(.*)$/\1/')";
+ver="$(egrep '^Version:' 'control' | sed -E 's/^Version:[[:space:]]*(.*)$/\1/')";
+if [ -z "$pkg" ]; then
+    echo '[!] Missing package identifier';
+    exit 1;
+fi;
+if [ -z "$ver" ]; then
+    echo '[!] Missing version number';
+    exit 1;
+fi;
+
+# control.tar.gz
+tar -czf "$tmp/control.tar.gz" --exclude '.DS_Store' --exclude '._*' ./;
+
+# data.tar.lzma
+cd "$src";
+tar -c --lzma -f "$tmp/data.tar.lzma" --exclude '.DS_Store' --exclude '._*' --exclude './.control' ./;
+
+# debian-binary
+echo '2.0' >"$tmp/debian-binary";
+
+# deb
+cd "$tmp";
+ar -cr "$dst/${pkg}_${ver}_iphoneos-arm.deb" 'debian-binary' 'control.tar.gz' 'data.tar.lzma';
