@@ -1,0 +1,40 @@
+#!/bin/bash
+
+set -e;
+
+printf '%-16s %-9s %-7s %5s %s\n' 'User' 'RunAtLoad' 'Enabled' '#Args' 'Path';
+
+for x in *.plist; do
+    if ! plutil -extract 'Label' xml1 -o - "$x" &>/dev/null; then
+        continue;
+    fi;
+    user='root';
+    run='no';
+    en='yes';
+    nargs=0;
+    bin='';
+    if plutil -extract 'UserName' xml1 -o - "$x" &>/dev/null; then
+        user="$(plutil -extract 'UserName' xml1 -o - "$x" | xmllint -xpath '/plist/string/text()' -)";
+    fi;
+    if plutil -extract 'RunAtLoad' xml1 -o - "$x" &>/dev/null; then
+        if plutil -extract 'RunAtLoad' xml1 -o - "$x" | xmllint -xpath '/plist/true' - &>/dev/null; then
+            run='yes';
+        fi;
+    fi;
+    if plutil -extract 'Disabled' xml1 -o - "$x" &>/dev/null; then
+        if plutil -extract 'Disabled' xml1 -o - "$x" | xmllint -xpath '/plist/true' - &>/dev/null; then
+            en='no';
+        fi;
+    fi;
+    if plutil -extract 'ProgramArguments' xml1 -o - "$x" &>/dev/null; then
+        nargs="$(plutil -extract 'ProgramArguments' xml1 -o - "$x" | xmllint -xpath 'count(/plist/array/string)' -)";
+    elif plutil -extract 'Program' xml1 -o - "$x" &>/dev/null; then
+        nargs=1;
+    fi;
+    if plutil -extract 'Program' xml1 -o - "$x" &>/dev/null; then
+        bin="$(plutil -extract 'Program' xml1 -o - "$x" | xmllint -xpath '/plist/string/text()' -)";
+    elif plutil -extract 'ProgramArguments' xml1 -o - "$x" &>/dev/null; then
+        bin="$(plutil -extract 'ProgramArguments' xml1 -o - "$x" | xmllint -xpath '/plist/array/string[1]/text()' -)";
+    fi;
+    printf '%-16s %-9s %-7s %-5s %s\n' "$user" "$run" "$en" "$nargs" "$bin";
+done;
