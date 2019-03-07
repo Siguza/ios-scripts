@@ -1,0 +1,24 @@
+#!/usr/bin/env php
+<?php
+
+// Hard to believe, but PHP is actually doing so much better than bash...
+define('NL', "\n");
+if($_SERVER['argc'] != 3)
+{
+    echo 'Usage: '.$_SERVER['argv'][0].' 0x... dyld_shared_cache*'.NL;
+    exit;
+}
+
+$addr = intval($_SERVER['argv'][1], 0);
+$segs = explode(NL, shell_exec('dsc_util -map '.escapeshellarg($_SERVER['argv'][2])));
+foreach($segs as $line)
+{
+    $m = [];
+    if(preg_match('/^(0x[0-9A-F]+) - (0x[0-9A-F]+) /', $line, $m) !== false)
+    {
+        if(intval($m[1], 0) <= $addr && $addr < intval($m[2], 0))
+        {
+            echo $line.NL;
+        }
+    }
+}
