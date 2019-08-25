@@ -5,12 +5,22 @@ set -e;
 if [ $# -ge 1 ]; then
     shsh="$1";
 else
-    shsh=( *.shsh );
+    shsh=();
+    while read -r; do
+        if ! [ -z "$REPLY" ]; then
+            shsh+=("$REPLY");
+        fi;
+    done <<<"$(find . -type f -name '*.shsh')";
+    while read -r; do
+        if ! [ -z "$REPLY" ]; then
+            shsh+=("$REPLY");
+        fi;
+    done <<<"$(find . -type f -name '*.shsh2')";
     if [ "${#shsh[@]}" -gt 1 ]; then
-        echo 'More than one shsh file found in current directory. Please specify one.';
+        echo 'More than one shsh/shsh2 file found in current directory. Please specify one.';
         exit 1;
-    elif [ "${shsh[0]}" == '*.shsh' ]; then
-        echo 'No shsh file found in current directory. Please specify one.';
+    elif [ "${#shsh[@]}" -lt 1 ]; then
+        echo 'No shsh/shsh2 file found in current directory. Please specify one.';
         exit 1;
     fi;
     shsh="${shsh[0]}";
