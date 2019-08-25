@@ -2,7 +2,7 @@
 
 set -e;
 
-if [ "$1" != '' ]; then
+if [ $# -ge 1 ]; then
     shsh="$1";
 else
     shsh=( *.shsh );
@@ -16,14 +16,14 @@ else
     shsh="${shsh[0]}";
 fi;
 
-#if [ "$2" != '' ]; then
-#    apticket="$2";
-#else
-#    apticket='apticket.der';
-#fi;
+if [ $# -ge 2 ]; then
+    apticket="$2";
+else
+    apticket='apticket.der';
+fi;
 
 if plutil -extract ApImg4Ticket xml1 -o - "$shsh" &>/dev/null; then # Img4 format
-    plutil -extract ApImg4Ticket xml1 -o - "$shsh" | xmllint -xpath '/plist/data/text()' - | base64 -D > 'apticket.der';
+    plutil -extract ApImg4Ticket xml1 -o - "$shsh" | xmllint -xpath '/plist/data/text()' - | base64 -D >"$apticket";
 else # Img3 format
-    plutil -extract APTicket xml1 -o - "$shsh" | xmllint -xpath '/plist/data/text()' - | base64 -D > 'apticket.der';
+    plutil -extract APTicket xml1 -o - "$shsh" | xmllint -xpath '/plist/data/text()' - | base64 -D >"$apticket";
 fi;
